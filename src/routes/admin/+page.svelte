@@ -12,21 +12,21 @@
 
 	const referenceDate = $derived.by(() => new SvelteDate(`${data.referenceMonthParam}-01T00:00:00`));
 
-	const participantsMap = $derived.by(() => {
-		const map = new SvelteMap<string, string>();
-		for (const entry of data.participants ?? []) {
-			map.set(entry.date, entry.name);
-		}
-		return map;
-	});
+const participantsMap = $derived.by(() => {
+	const map = new SvelteMap<string, string>();
+	for (const entry of data.participants ?? []) {
+		map.set(entry.date, entry.name);
+	}
+	return map;
+});
 
-	const bans = $derived.by(() => {
-		const map = new SvelteMap<string, string | null>();
-		for (const ban of data.bans ?? []) {
-			map.set(ban.date, ban.winnerName ?? null);
-		}
-		return map;
-	});
+const bans = $derived.by(() => {
+	const map = new SvelteMap<string, string | null>();
+	for (const ban of data.bans ?? []) {
+		map.set(ban.date, ban.winnerName ?? null);
+	}
+	return map;
+});
 
 type CalendarDay = { iso: string; label: number; inMonth: boolean; name?: string; banned: boolean };
 
@@ -59,14 +59,41 @@ type CalendarDay = { iso: string; label: number; inMonth: boolean; name?: string
 let feedback = $derived(form?.message ?? null);
 let feedbackAction = $derived(form?.action ?? null);
 
+let modalContent = $state<{ title: string; description: string } | null>(null);
+
+function describeDay(day: CalendarDay) {
+	const winnerName = bans.get(day.iso);
+	if (day.banned) {
+		return {
+			title: `Ban: ${day.iso}`,
+			description: winnerName ? `Winner: ${winnerName}` : 'No winner.'
+		};
+	}
+	if (day.name) {
+		return {
+			title: `Claimed: ${day.iso}`,
+			description: `${day.name} controls this date.`
+		};
+	}
+	return {
+		title: `Open date: ${day.iso}`,
+		description: day.iso < todayIso ? 'Past date with no pick.' : 'Available for the next season.'
+	};
+}
+
+function openModal(day: CalendarDay) {
+	modalContent = describeDay(day);
+}
+
 function applySelectedDate(date: string) {
 	selectedDate = date;
 	banDate = date;
 }
 
-function handleDayClick(day: CalendarDay) {
-	applySelectedDate(day.iso);
-}
+	function handleDayClick(day: CalendarDay) {
+		applySelectedDate(day.iso);
+		openModal(day);
+	}
 
 function handleDateInput(event: Event) {
 	const target = event.currentTarget as HTMLInputElement;
@@ -100,8 +127,12 @@ function confirmDelete(event: Event) {
 	}
 }
 
-const selectedName = $derived.by(() => participantsMap.get(selectedDate));
-const canDeleteSelected = $derived.by(() => !!selectedName && selectedDate >= todayIso);
+	const selectedName = $derived.by(() => participantsMap.get(selectedDate));
+	const canDeleteSelected = $derived.by(() => !!selectedName && selectedDate >= todayIso);
+
+function closeModal() {
+	modalContent = null;
+}
 </script>
 
 <section class="admin-grid">
@@ -213,6 +244,34 @@ const canDeleteSelected = $derived.by(() => !!selectedName && selectedDate >= to
 		<span><span class="dot past"></span>Past</span>
 	</div>
 </section>
+
+{#if modalContent}
+	<div
+		class="modal-overlay"
+		role="button"
+		tabindex="0"
+		aria-label="Close calendar details"
+		onclick={closeModal}
+		onkeydown={(event) => {
+			if (event.key === 'Enter' || event.key === ' ') {
+				event.preventDefault();
+				closeModal();
+			}
+		}}
+	>
+		<div
+			class="modal-card"
+			role="dialog"
+			tabindex="-1"
+			aria-modal="true"
+			onclick={(event) => event.stopPropagation()}
+			onkeydown={(event) => event.stopPropagation()}
+		>
+			<h3>{modalContent.title}</h3>
+			<p>{modalContent.description}</p>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.admin-grid {
@@ -394,8 +453,6 @@ const canDeleteSelected = $derived.by(() => !!selectedName && selectedDate >= to
 
 	.day.past {
 		opacity: 0.45;
-		cursor: not-allowed;
-		pointer-events: none;
 	}
 
 	.day.selected {
@@ -447,6 +504,36 @@ const canDeleteSelected = $derived.by(() => !!selectedName && selectedDate >= to
 		background: rgba(227, 86, 86, 0.15);
 		border: 1px solid rgba(227, 86, 86, 0.3);
 		color: #ffc9c9;
+	}
+
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.65);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.5rem;
+		z-index: 20;
+	}
+
+	.modal-card {
+		background: rgba(10, 12, 22, 0.95);
+		border-radius: 16px;
+		padding: 1.5rem;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		width: min(360px, 90vw);
+		box-shadow: 0 15px 45px rgba(0, 0, 0, 0.5);
+	}
+
+	.modal-card h3 {
+		margin: 0 0 0.5rem;
+		color: #f7e99a;
+	}
+
+	.modal-card p {
+		margin: 0;
+		color: #d6f5ff;
 	}
 
 	@media (max-width: 768px) {

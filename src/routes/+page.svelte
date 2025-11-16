@@ -59,6 +59,46 @@
 
 	const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+	let modalContent = $state<{
+		title: string;
+		description: string;
+	} | null>(null);
+
+	function describeDay(day: CalendarDay) {
+		const winnerName = bans.get(day.iso);
+		const isPast = day.iso < todayIso;
+		if (day.banned) {
+			return {
+				title: `Ban: ${day.iso}`,
+				description: winnerName ? `Winner: ${winnerName}` : 'No winner.'
+			};
+		}
+		if (day.name) {
+			return {
+				title: `Claimed: ${day.iso}`,
+				description: `${day.name} has this date locked.`
+			};
+		}
+		if (isPast) {
+			return {
+				title: `Past date: ${day.iso}`,
+				description: 'No pick was made for this day.'
+			};
+		}
+		return {
+			title: `Open date: ${day.iso}`,
+			description: 'Available for the next season.'
+		};
+	}
+
+	function openModal(day: CalendarDay) {
+		modalContent = describeDay(day);
+	}
+
+	function closeModal() {
+		modalContent = null;
+	}
+
 	function navigate(offset: number) {
 		const target = new SvelteDate(referenceDate);
 		target.setMonth(target.getMonth() + offset);
@@ -98,8 +138,11 @@
 					{@const isBanned = day.banned}
 					{@const winnerName = bans.get(day.iso)}
 					{@const isPast = day.iso < todayIso}
-					<div
+					<button
+						type="button"
 						class={`day ${day.inMonth ? '' : 'muted'} ${day.iso === todayIso ? 'today' : ''} ${day.name ? 'claimed' : ''} ${isPast ? 'past' : ''} ${isBanned ? 'banned' : ''}`}
+						onclick={() => openModal(day)}
+						aria-label={`Details for ${day.iso}`}
 					>
 						<span class="date">{day.label}</span>
 						{#if isBanned}
@@ -110,13 +153,41 @@
 						{:else if !isPast}
 							<small>Open</small>
 						{/if}
-					</div>
+					</button>
 				{/each}
 			</div>
 		{/each}
 	</div>
 	<p class="legend">Claimed days glow with a vibrant parrot green. Empty slots await brave guesses.</p>
 </section>
+
+{#if modalContent}
+	<div
+		class="modal-overlay"
+		role="button"
+		tabindex="0"
+		aria-label="Close calendar details"
+		onclick={closeModal}
+		onkeydown={(event) => {
+			if (event.key === 'Enter' || event.key === ' ') {
+				event.preventDefault();
+				closeModal();
+			}
+		}}
+	>
+		<div
+			class="modal-card"
+			role="dialog"
+			tabindex="-1"
+			aria-modal="true"
+			onclick={(event) => event.stopPropagation()}
+			onkeydown={(event) => event.stopPropagation()}
+		>
+			<h3>{modalContent.title}</h3>
+			<p>{modalContent.description}</p>
+		</div>
+	</div>
+{/if}
 
 <section class="cta">
 	<h3>Think you know the next banning date?</h3>
@@ -205,6 +276,9 @@
 		flex-direction: column;
 		gap: 0.25rem;
 		position: relative;
+		width: 100%;
+		text-align: left;
+		cursor: pointer;
 	}
 
 	.day.today {
@@ -259,6 +333,36 @@
 	.legend {
 		margin-top: 1rem;
 		color: #9bb0c7;
+	}
+
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.65);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.5rem;
+		z-index: 10;
+	}
+
+	.modal-card {
+		background: rgba(10, 12, 22, 0.95);
+		border-radius: 16px;
+		padding: 1.5rem;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		width: min(360px, 90vw);
+		box-shadow: 0 15px 45px rgba(0, 0, 0, 0.5);
+	}
+
+	.modal-card h3 {
+		margin: 0 0 0.5rem;
+		color: #f7e99a;
+	}
+
+	.modal-card p {
+		margin: 0;
+		color: #d6f5ff;
 	}
 
 	.cta {
