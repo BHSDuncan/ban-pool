@@ -23,7 +23,7 @@
 
 	let todayIso = $derived(data.today.slice(0, 10));
 
-	let referenceDate = $derived.by(() => new SvelteDate(`${data.referenceMonthParam}-01T00:00:00`));
+let referenceDate = $derived.by(() => new SvelteDate(`${data.referenceMonthParam}-01T00:00:00`));
 
 	let monthLabel = $derived.by(() =>
 		new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(referenceDate)
@@ -59,37 +59,40 @@
 
 	const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-	let modalContent = $state<{
-		title: string;
-		description: string;
-	} | null>(null);
+let modalContent = $state<{
+	title: string;
+	description?: string;
+	descriptionHtml?: string;
+} | null>(null);
 
 	function describeDay(day: CalendarDay) {
 		const winnerName = bans.get(day.iso);
 		const isPast = day.iso < todayIso;
-		if (day.banned) {
-			return {
-				title: `Ban: ${day.iso}`,
-				description: winnerName ? `Winner: ${winnerName}` : 'No winner.'
-			};
-		}
-		if (day.name) {
-			return {
-				title: `Claimed: ${day.iso}`,
-				description: `${day.name} has this date locked.`
-			};
-		}
-		if (isPast) {
-			return {
-				title: `Past date: ${day.iso}`,
-				description: 'No pick was made for this day.'
-			};
-		}
+	if (day.banned) {
 		return {
-			title: `Open date: ${day.iso}`,
-			description: 'Available for the next season.'
+			title: `Ban: ${day.iso}`,
+			descriptionHtml: winnerName
+				? `Winner: <strong>${winnerName}</strong>`
+				: 'No winner.'
 		};
 	}
+	if (day.name) {
+		return {
+			title: `Claimed: ${day.iso}`,
+			descriptionHtml: `<strong>${day.name}</strong> has this date locked.`
+		};
+	}
+	if (isPast) {
+		return {
+			title: `Past date: ${day.iso}`,
+			description: 'No pick was made for this day.'
+		};
+	}
+	return {
+		title: `Open date: ${day.iso}`,
+		description: 'Available for the next season.'
+	};
+}
 
 	function openModal(day: CalendarDay) {
 		modalContent = describeDay(day);
@@ -149,7 +152,7 @@
 							<span class="ban-label">BAN!</span>
 							<span class="winner-label">{winnerName ? `Winner: ${winnerName}` : 'No winner.'}</span>
 						{:else if day.name}
-							<strong>{day.name}</strong>
+							<strong class="participant-label">{day.name}</strong>
 						{:else if !isPast}
 							<small>Open</small>
 						{/if}
@@ -184,7 +187,11 @@
 			onkeydown={(event) => event.stopPropagation()}
 		>
 			<h3>{modalContent.title}</h3>
-			<p>{modalContent.description}</p>
+			{#if modalContent.descriptionHtml}
+				<p>{@html modalContent.descriptionHtml}</p>
+			{:else if modalContent.description}
+				<p>{modalContent.description}</p>
+			{/if}
 		</div>
 	</div>
 {/if}
@@ -310,6 +317,13 @@
 	.winner-label {
 		color: #cfd4dd;
 		font-weight: 400;
+	}
+
+	@media (max-width: 640px) {
+		.participant-label,
+		.winner-label {
+			display: none;
+		}
 	}
 
 	.day.muted {

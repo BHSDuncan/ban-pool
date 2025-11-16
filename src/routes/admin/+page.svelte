@@ -59,20 +59,20 @@ type CalendarDay = { iso: string; label: number; inMonth: boolean; name?: string
 let feedback = $derived(form?.message ?? null);
 let feedbackAction = $derived(form?.action ?? null);
 
-let modalContent = $state<{ title: string; description: string } | null>(null);
+let modalContent = $state<{ title: string; description?: string; descriptionHtml?: string } | null>(null);
 
 function describeDay(day: CalendarDay) {
 	const winnerName = bans.get(day.iso);
 	if (day.banned) {
 		return {
 			title: `Ban: ${day.iso}`,
-			description: winnerName ? `Winner: ${winnerName}` : 'No winner.'
+			descriptionHtml: winnerName ? `Winner: <strong>${winnerName}</strong>` : 'No winner.'
 		};
 	}
 	if (day.name) {
 		return {
 			title: `Claimed: ${day.iso}`,
-			description: `${day.name} controls this date.`
+			descriptionHtml: `<strong>${day.name}</strong> controls this date.`
 		};
 	}
 	return {
@@ -228,7 +228,7 @@ function closeModal() {
 								<span class="ban-label">BAN!</span>
 								<span class="winner-label">{winnerName ? `Winner: ${winnerName}` : 'No winner.'}</span>
 							{:else if day.name}
-								<strong>{day.name}</strong>
+								<strong class="participant-label">{day.name}</strong>
 							{:else if !isPast}
 								<small>Open</small>
 							{/if}
@@ -268,7 +268,11 @@ function closeModal() {
 			onkeydown={(event) => event.stopPropagation()}
 		>
 			<h3>{modalContent.title}</h3>
-			<p>{modalContent.description}</p>
+			{#if modalContent.descriptionHtml}
+				<p>{@html modalContent.descriptionHtml}</p>
+			{:else if modalContent.description}
+				<p>{modalContent.description}</p>
+			{/if}
 		</div>
 	</div>
 {/if}
@@ -443,6 +447,13 @@ function closeModal() {
 	.winner-label {
 		color: #cfd4dd;
 		font-weight: 400;
+	}
+
+	@media (max-width: 640px) {
+		.participant-label,
+		.winner-label {
+			display: none;
+		}
 	}
 
 	.day.muted {
