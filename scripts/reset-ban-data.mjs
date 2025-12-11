@@ -1,14 +1,29 @@
 #!/usr/bin/env node
 import { MongoClient } from 'mongodb';
 
-const uri = process.env.MONGODB_URI;
+const isProd = process.env.NODE_ENV === 'production';
+
+const uri = isProd ? process.env.MONGODB_URI_PROD ?? process.env.MONGODB_URI : process.env.MONGODB_URI_DEV ?? process.env.MONGODB_URI;
 
 if (!uri) {
-	console.error('Missing MONGODB_URI environment variable.');
+	const envName = isProd ? 'MONGODB_URI_PROD (or MONGODB_URI)' : 'MONGODB_URI_DEV (or MONGODB_URI)';
+	console.error(`Missing ${envName} environment variable.`);
 	process.exit(1);
 }
 
-const envPrefix = process.env.NODE_ENV === 'production' ? 'prod_' : 'dev_';
+const dbName = isProd
+	? process.env.MONGODB_DATABASE_PROD ?? process.env.MONGODB_DATABASE
+	: process.env.MONGODB_DATABASE_DEV ?? process.env.MONGODB_DATABASE;
+
+if (!dbName) {
+	const envName = isProd
+		? 'MONGODB_DATABASE_PROD (or MONGODB_DATABASE)'
+		: 'MONGODB_DATABASE_DEV (or MONGODB_DATABASE)';
+	console.error(`Missing ${envName} environment variable.`);
+	process.exit(1);
+}
+
+const envPrefix = isProd ? 'prod_' : 'dev_';
 
 const client = new MongoClient(uri);
 
@@ -39,7 +54,7 @@ function startOfUTC(date) {
 
 async function run() {
 	await client.connect();
-	const db = client.db();
+	const db = client.db(dbName);
 	const participants = db.collection(`${envPrefix}participants`);
 	const winners = db.collection(`${envPrefix}winners`);
 

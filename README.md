@@ -10,7 +10,7 @@ A dark-mode SvelteKit application for managing a friendly "ban pool" at the loca
   - protecting past dates from changes,
   - declaring new bans using the BAN! workflow (must be after the prior ban),
   - automatic pool reset for all dates up to the ban date.
-- **MongoDB Atlas** backed storage using the `MONGODB_URI` environment variable.
+- **MongoDB Atlas** backed storage using `MONGODB_URI` + `MONGODB_DATABASE` environment variables.
 - Pirate-inspired dark theme and navigation links available everywhere.
 
 ## Getting started
@@ -20,6 +20,13 @@ A dark-mode SvelteKit application for managing a friendly "ban pool" at the loca
    ```
 2. Set required environment variables in `.env` (or your deployment target):
    ```bash
+   # Database names inside your MongoDB project (kept separate from the URI).
+   # These let you share one MongoDB project/cluster while still separating env data.
+   MONGODB_DATABASE_DEV="captain-jack-dev"
+   MONGODB_DATABASE_PROD="captain-jack-prod"
+   # Optional shared fallback if you prefer a single database name:
+   MONGODB_DATABASE="captain-jack"
+   # Connection strings should point to the project/cluster only (no /<db> suffix).
    # Development DB (used locally). Falls back to MONGODB_URI.
    MONGODB_URI_DEV="your mongodb connection string for dev"
    # Production DB (used in deploys). Falls back to MONGODB_URI.
@@ -57,4 +64,4 @@ The script loads credentials from `.env.local` via `node --env-file=.env.local`,
 - `npm run build` – creates a production build, useful before deploying (e.g., to Vercel).
 
 ## Deployment
-The project uses `@sveltejs/adapter-auto`, so it works locally and on platforms like Vercel/Netlify without extra config. Remember to set `MONGODB_URI`, `ADMIN_USERNAME`, and either `ADMIN_PASSWORD` or `ADMIN_PASSWORD_HASH` in the deployment environment.
+The project uses `@sveltejs/adapter-auto`, so it works locally and on platforms like Vercel/Netlify without extra config. Remember to set `MONGODB_URI`, `MONGODB_DATABASE`, `ADMIN_USERNAME`, and either `ADMIN_PASSWORD` or `ADMIN_PASSWORD_HASH` in the deployment environment.
