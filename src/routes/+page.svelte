@@ -243,7 +243,7 @@
 	.ban-counter {
 		margin-top: 0.75rem;
 		font-weight: 600;
-		color: #f7e99a;
+		color: #ffb86b;
 	}
 
 	.tagline {
