@@ -1,6 +1,6 @@
 import { startOfMonth, endOfMonth } from 'date-fns';
 import type { PageServerLoad } from './$types';
-import { listParticipantsBetween, listWinnersBetween } from '$lib/server/pool';
+import { getLatestWinner, listParticipantsBetween, listWinnersBetween } from '$lib/server/pool';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const monthParam = url.searchParams.get('month');
@@ -11,9 +11,10 @@ export const load: PageServerLoad = async ({ url }) => {
 
 	const from = startOfMonth(reference);
 	const to = endOfMonth(reference);
-	const [participants, bans] = await Promise.all([
+	const [participants, bans, latestBan] = await Promise.all([
 		listParticipantsBetween(from, to),
-		listWinnersBetween(from, to)
+		listWinnersBetween(from, to),
+		getLatestWinner()
 	]);
 
 	return {
@@ -27,6 +28,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		})),
 		referenceMonthParam: `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, '0')}`,
 		today: new Date().toISOString(),
+		latestBanDate: latestBan ? latestBan.date.toISOString().slice(0, 10) : null,
 		bans: bans.map((ban) => ({
 			date: ban.date.toISOString().slice(0, 10),
 			winnerName: ban.winnerName ?? null

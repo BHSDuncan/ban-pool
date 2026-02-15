@@ -22,8 +22,19 @@
 	});
 
 	let todayIso = $derived(data.today.slice(0, 10));
+	let daysSinceMostRecentBan = $derived.by(() => {
+		if (!data.latestBanDate) {
+			return null;
+		}
+		const [year, month, day] = data.latestBanDate.split('-').map(Number);
+		const banStart = new SvelteDate(year, month - 1, day);
+		const now = new SvelteDate();
+		const todayStart = new SvelteDate(now.getFullYear(), now.getMonth(), now.getDate());
+		const diffMs = todayStart.getTime() - banStart.getTime();
+		return Math.max(0, Math.floor(diffMs / 86_400_000));
+	});
 
-let referenceDate = $derived.by(() => new SvelteDate(`${data.referenceMonthParam}-01T00:00:00`));
+	let referenceDate = $derived.by(() => new SvelteDate(`${data.referenceMonthParam}-01T00:00:00`));
 
 	let monthLabel = $derived.by(() =>
 		new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(referenceDate)
@@ -59,40 +70,38 @@ let referenceDate = $derived.by(() => new SvelteDate(`${data.referenceMonthParam
 
 	const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-let modalContent = $state<{
-	title: string;
-	description?: string;
-	descriptionHtml?: string;
-} | null>(null);
+	let modalContent = $state<{
+		title: string;
+		description?: string;
+		descriptionHtml?: string;
+	} | null>(null);
 
 	function describeDay(day: CalendarDay) {
 		const winnerName = bans.get(day.iso);
 		const isPast = day.iso < todayIso;
-	if (day.banned) {
+		if (day.banned) {
+			return {
+				title: `Ban: ${day.iso}`,
+				descriptionHtml: winnerName ? `Winner: <strong>${winnerName}</strong>` : 'No winner.'
+			};
+		}
+		if (day.name) {
+			return {
+				title: `Claimed: ${day.iso}`,
+				descriptionHtml: `<strong>${day.name}</strong> has this date locked.`
+			};
+		}
+		if (isPast) {
+			return {
+				title: `Past date: ${day.iso}`,
+				description: 'No pick was made for this day.'
+			};
+		}
 		return {
-			title: `Ban: ${day.iso}`,
-			descriptionHtml: winnerName
-				? `Winner: <strong>${winnerName}</strong>`
-				: 'No winner.'
+			title: `Open date: ${day.iso}`,
+			description: 'Available for the next season.'
 		};
 	}
-	if (day.name) {
-		return {
-			title: `Claimed: ${day.iso}`,
-			descriptionHtml: `<strong>${day.name}</strong> has this date locked.`
-		};
-	}
-	if (isPast) {
-		return {
-			title: `Past date: ${day.iso}`,
-			description: 'No pick was made for this day.'
-		};
-	}
-	return {
-		title: `Open date: ${day.iso}`,
-		description: 'Available for the next season.'
-	};
-}
 
 	function openModal(day: CalendarDay) {
 		modalContent = describeDay(day);
@@ -116,6 +125,14 @@ let modalContent = $state<{
 		<p>
 			Pick your day, share your hunch, and await Captain Jack's next banning decree. Only one
 			participant can claim each date.
+		</p>
+		<p class="ban-counter">
+			{#if daysSinceMostRecentBan === null}
+				No bans have been recorded yet.
+			{:else}
+				{daysSinceMostRecentBan} {daysSinceMostRecentBan === 1 ? 'day' : 'days'} since the most
+				recent ban.
+			{/if}
 		</p>
 	</div>
 	<p aria-hidden="true">&nbsp;</p>
@@ -221,6 +238,12 @@ let modalContent = $state<{
 		margin: 0;
 		color: #d6f5ff;
 		max-width: 60ch;
+	}
+
+	.ban-counter {
+		margin-top: 0.75rem;
+		font-weight: 600;
+		color: #f7e99a;
 	}
 
 	.tagline {

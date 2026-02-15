@@ -3,14 +3,18 @@
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
+	"engines": {
+		"node": "^20.19.0 || >=22.12.0"
+	},
 	"scripts": {
-		"dev": "vite dev",
-		"build": "vite build",
-		"preview": "vite preview",
+		"check:node": "node scripts/check-node-version.cjs",
+		"dev": "npm run check:node && vite dev",
+		"build": "npm run check:node && vite build",
+		"preview": "npm run check:node && vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"seed:data": "node --env-file=.env.local scripts/reset-ban-data.mjs"
+		"check": "npm run check:node && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "npm run check:node && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"seed:data": "npm run check:node && node --env-file=.env.local scripts/reset-ban-data.mjs"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.0",

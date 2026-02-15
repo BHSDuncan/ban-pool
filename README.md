@@ -14,11 +14,17 @@ A dark-mode SvelteKit application for managing a friendly "ban pool" at the loca
 - Pirate-inspired dark theme and navigation links available everywhere.
 
 ## Getting started
-1. Install dependencies
+1. Use a supported Node.js runtime (`^20.19.0` or `>=22.12.0`).
+   With `nvm`:
+   ```bash
+   nvm install
+   nvm use
+   ```
+2. Install dependencies
    ```bash
    npm install
    ```
-2. Set required environment variables in `.env` (or your deployment target):
+3. Set required environment variables in `.env` (or your deployment target):
    ```bash
    # Database names inside your MongoDB project (kept separate from the URI).
    # These let you share one MongoDB project/cluster while still separating env data.
@@ -45,7 +51,7 @@ A dark-mode SvelteKit application for managing a friendly "ban pool" at the loca
    (Copy the printed `salt:hash` value into `ADMIN_PASSWORD_HASH`.)
 
 Collections automatically use an environment prefix (`dev_` locally, `prod_` in production), so both environments can safely share the same MongoDB database without overlapping documents.
-3. Run the dev server
+4. Run the dev server
    ```bash
    npm run dev -- --open
    ```
