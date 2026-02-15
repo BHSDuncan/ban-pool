@@ -240,13 +240,13 @@
 		max-width: 60ch;
 	}
 
-	.ban-counter {
+	.hero p.ban-counter {
 		margin-top: 0.75rem;
 		font-weight: 600;
 		color: #ffb86b;
 	}
 
-	.tagline {
+	.hero p.tagline {
 		margin-top: 1rem;
 		font-style: italic;
 		color: #9bb0c7;
