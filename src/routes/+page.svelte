@@ -126,12 +126,12 @@
 			Pick your day, share your hunch, and await Captain Jack's next banning decree. Only one
 			participant can claim each date.
 		</p>
+		<p aria-hidden="true">&nbsp;</p>
 		<p class="ban-counter">
 			{#if daysSinceMostRecentBan === null}
 				No bans have been recorded yet.
 			{:else}
-				{daysSinceMostRecentBan} {daysSinceMostRecentBan === 1 ? 'day' : 'days'} since the most
-				recent ban.
+				-=- Days since last ban: {daysSinceMostRecentBan} -=-
 			{/if}
 		</p>
 	</div>
