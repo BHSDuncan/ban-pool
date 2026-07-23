@@ -71,3 +71,17 @@ The script loads credentials from `.env.local` via `node --env-file=.env.local`,
 
 ## Deployment
 The project uses `@sveltejs/adapter-auto`, so it works locally and on platforms like Vercel/Netlify without extra config. Remember to set `MONGODB_URI`, `MONGODB_DATABASE`, `ADMIN_USERNAME`, and either `ADMIN_PASSWORD` or `ADMIN_PASSWORD_HASH` in the deployment environment.
+
+### Migrating production ban records
+
+The optional ban-detail fields are additive, but an idempotent migration is included so legacy
+production records have the same explicit shape. From a Vercel-linked checkout, run:
+
+```bash
+vercel env pull .env.production.local --environment=production
+npm run db:migrate:production
+```
+
+The script only updates documents in `prod_winners` that are missing one or more of the new fields.
+It can be run again safely. Keep `.env.production.local` private and delete it after use if it is
+not part of your normal local deployment workflow.

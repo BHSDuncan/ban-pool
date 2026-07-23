@@ -24,8 +24,20 @@ const deleteSchema = z.object({
 	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 });
 
+const optionalText = (max: number) =>
+	z.preprocess(
+		(value) => {
+			const trimmed = typeof value === 'string' ? value.trim() : '';
+			return trimmed || undefined;
+		},
+		z.string().max(max).optional()
+	);
+
 const banSchema = z.object({
-	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+	banReason: optionalText(500),
+	bannedPersonName: optionalText(100),
+	bannedBy: optionalText(100)
 });
 
 const monthRegex = /^\d{4}-\d{2}$/;
@@ -61,7 +73,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		referenceMonthParam: `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`,
 		bans: monthBans.map((ban) => ({
 			date: ban.date.toISOString().slice(0, 10),
-			winnerName: ban.winnerName ?? null
+			winnerName: ban.winnerName ?? null,
+			banReason: ban.banReason ?? null,
+			bannedPersonName: ban.bannedPersonName ?? null,
+			bannedBy: ban.bannedBy ?? null
 		}))
 	};
 };
@@ -121,9 +136,18 @@ export const actions: Actions = {
 			throw redirect(302, '/admin/login');
 		}
 		const form = await request.formData();
-		const parsed = banSchema.safeParse({ date: form.get('date') });
+		const parsed = banSchema.safeParse({
+			date: form.get('date'),
+			banReason: form.get('banReason'),
+			bannedPersonName: form.get('bannedPersonName'),
+			bannedBy: form.get('bannedBy')
+		});
 		if (!parsed.success) {
-			return fail(400, { action: 'ban', message: 'Pick a valid date.', ok: false });
+			return fail(400, {
+				action: 'ban',
+				message: 'Check the ban date and optional details, then try again.',
+				ok: false
+			});
 		}
 		const targetDate = parseDateOnly(parsed.data.date);
 		const today = normalizeDate(new Date());
@@ -143,7 +167,11 @@ export const actions: Actions = {
 			});
 		}
 		const participant = await getParticipantByDate(targetDate);
-		await addWinner(targetDate, participant?.name ?? null);
+		await addWinner(targetDate, participant?.name ?? null, {
+			banReason: parsed.data.banReason,
+			bannedPersonName: parsed.data.bannedPersonName,
+			bannedBy: parsed.data.bannedBy
+		});
 		await clearParticipantsAfter(targetDate);
 		return { action: 'ban', message: 'Ban recorded.', ok: true };
 	}

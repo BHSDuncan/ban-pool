@@ -13,10 +13,22 @@
 		return map;
 	});
 
+	type Ban = {
+		winnerName: string | null;
+		banReason: string | null;
+		bannedPersonName: string | null;
+		bannedBy: string | null;
+	};
+
 	const bans = $derived.by(() => {
-		const map = new SvelteMap<string, string | null>();
+		const map = new SvelteMap<string, Ban>();
 		for (const ban of data.bans ?? []) {
-			map.set(ban.date, ban.winnerName ?? null);
+			map.set(ban.date, {
+				winnerName: ban.winnerName ?? null,
+				banReason: ban.banReason ?? null,
+				bannedPersonName: ban.bannedPersonName ?? null,
+				bannedBy: ban.bannedBy ?? null
+			});
 		}
 		return map;
 	});
@@ -73,22 +85,26 @@
 	let modalContent = $state<{
 		title: string;
 		description?: string;
-		descriptionHtml?: string;
+		emphasis?: string;
+		ban?: Ban;
 	} | null>(null);
 
 	function describeDay(day: CalendarDay) {
-		const winnerName = bans.get(day.iso);
+		const ban = bans.get(day.iso);
 		const isPast = day.iso < todayIso;
-		if (day.banned) {
+		if (ban) {
 			return {
 				title: `Ban: ${day.iso}`,
-				descriptionHtml: winnerName ? `Winner: <strong>${winnerName}</strong>` : 'No winner.'
+				description: ban.winnerName ? 'Winning pool pick' : 'No winner.',
+				emphasis: ban.winnerName ?? undefined,
+				ban
 			};
 		}
 		if (day.name) {
 			return {
 				title: `Claimed: ${day.iso}`,
-				descriptionHtml: `<strong>${day.name}</strong> has this date locked.`
+				description: 'This date is locked by',
+				emphasis: day.name
 			};
 		}
 		if (isPast) {
@@ -156,7 +172,7 @@
 			<div class="week">
 				{#each week as day (day.iso)}
 					{@const isBanned = day.banned}
-					{@const winnerName = bans.get(day.iso)}
+					{@const winnerName = bans.get(day.iso)?.winnerName}
 					{@const isPast = day.iso < todayIso}
 					<button
 						type="button"
@@ -204,10 +220,33 @@
 			onkeydown={(event) => event.stopPropagation()}
 		>
 			<h3>{modalContent.title}</h3>
-			{#if modalContent.descriptionHtml}
-				<p>{@html modalContent.descriptionHtml}</p>
-			{:else if modalContent.description}
+			{#if modalContent.description}
 				<p>{modalContent.description}</p>
+			{/if}
+			{#if modalContent.emphasis}
+				<p class="modal-emphasis">{modalContent.emphasis}</p>
+			{/if}
+			{#if modalContent.ban && (modalContent.ban.bannedPersonName || modalContent.ban.bannedBy || modalContent.ban.banReason)}
+				<dl class="ban-details">
+					{#if modalContent.ban.bannedPersonName}
+						<div>
+							<dt>Person banned</dt>
+							<dd>{modalContent.ban.bannedPersonName}</dd>
+						</div>
+					{/if}
+					{#if modalContent.ban.bannedBy}
+						<div>
+							<dt>Ban performed by</dt>
+							<dd>{modalContent.ban.bannedBy}</dd>
+						</div>
+					{/if}
+					{#if modalContent.ban.banReason}
+						<div class="reason">
+							<dt>Reason</dt>
+							<dd>{modalContent.ban.banReason}</dd>
+						</div>
+					{/if}
+				</dl>
 			{/if}
 		</div>
 	</div>
@@ -402,6 +441,44 @@
 		color: #d6f5ff;
 	}
 
+	.modal-card .modal-emphasis {
+		margin-top: 0.35rem;
+		color: #7fe795;
+		font-weight: 700;
+	}
+
+	.ban-details {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem;
+		margin: 1.25rem 0 0;
+		padding-top: 1rem;
+		border-top: 1px solid rgba(255, 255, 255, 0.12);
+	}
+
+	.ban-details div {
+		min-width: 0;
+	}
+
+	.ban-details .reason {
+		grid-column: 1 / -1;
+	}
+
+	.ban-details dt {
+		color: #8aaed1;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	.ban-details dd {
+		margin: 0.25rem 0 0;
+		color: #f0f4ff;
+		overflow-wrap: anywhere;
+		white-space: pre-wrap;
+	}
+
 	.cta {
 		margin-top: 2.5rem;
 		text-align: center;
@@ -439,6 +516,16 @@
 
 		.day {
 			min-height: 70px;
+		}
+	}
+
+	@media (max-width: 420px) {
+		.ban-details {
+			grid-template-columns: 1fr;
+		}
+
+		.ban-details .reason {
+			grid-column: auto;
 		}
 	}
 </style>

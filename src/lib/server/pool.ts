@@ -11,8 +11,13 @@ export type Participant = {
 export type Winner = {
 	date: Date;
 	winnerName?: string | null;
+	banReason?: string | null;
+	bannedPersonName?: string | null;
+	bannedBy?: string | null;
 	createdAt: Date;
 };
+
+export type BanDetails = Pick<Winner, 'banReason' | 'bannedPersonName' | 'bannedBy'>;
 
 let indexPromise: Promise<void> | null = null;
 
@@ -96,12 +101,19 @@ export async function clearParticipantsAfter(date: Date) {
 	await collection.deleteMany({ date: { $gt: normalizeDate(date) } });
 }
 
-export async function addWinner(date: Date, winnerName?: string | null) {
+export async function addWinner(
+	date: Date,
+	winnerName?: string | null,
+	details: BanDetails = {}
+) {
 	const collection = await winnersCollection();
 	const normalized = normalizeDate(date);
 	const doc: Winner = {
 		date: normalized,
 		winnerName: winnerName ?? null,
+		banReason: details.banReason ?? null,
+		bannedPersonName: details.bannedPersonName ?? null,
+		bannedBy: details.bannedBy ?? null,
 		createdAt: new Date()
 	};
 	await collection.insertOne(doc);

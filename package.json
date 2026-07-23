@@ -14,6 +14,7 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "npm run check:node && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "npm run check:node && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"db:migrate:production": "NODE_ENV=production node --env-file=.env.production.local scripts/migrate-production-ban-details.mjs",
 		"seed:data": "npm run check:node && node --env-file=.env.local scripts/reset-ban-data.mjs"
 	},
 	"devDependencies": {

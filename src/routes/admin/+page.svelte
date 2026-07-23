@@ -20,10 +20,22 @@ const participantsMap = $derived.by(() => {
 	return map;
 });
 
+type Ban = {
+	winnerName: string | null;
+	banReason: string | null;
+	bannedPersonName: string | null;
+	bannedBy: string | null;
+};
+
 const bans = $derived.by(() => {
-	const map = new SvelteMap<string, string | null>();
+	const map = new SvelteMap<string, Ban>();
 	for (const ban of data.bans ?? []) {
-		map.set(ban.date, ban.winnerName ?? null);
+		map.set(ban.date, {
+			winnerName: ban.winnerName ?? null,
+			banReason: ban.banReason ?? null,
+			bannedPersonName: ban.bannedPersonName ?? null,
+			bannedBy: ban.bannedBy ?? null
+		});
 	}
 	return map;
 });
@@ -59,20 +71,28 @@ type CalendarDay = { iso: string; label: number; inMonth: boolean; name?: string
 let feedback = $derived(form?.message ?? null);
 let feedbackAction = $derived(form?.action ?? null);
 
-let modalContent = $state<{ title: string; description?: string; descriptionHtml?: string } | null>(null);
+let modalContent = $state<{
+	title: string;
+	description?: string;
+	emphasis?: string;
+	ban?: Ban;
+} | null>(null);
 
 function describeDay(day: CalendarDay) {
-	const winnerName = bans.get(day.iso);
-	if (day.banned) {
+	const ban = bans.get(day.iso);
+	if (ban) {
 		return {
 			title: `Ban: ${day.iso}`,
-			descriptionHtml: winnerName ? `Winner: <strong>${winnerName}</strong>` : 'No winner.'
+			description: ban.winnerName ? 'Winning pool pick' : 'No winner.',
+			emphasis: ban.winnerName ?? undefined,
+			ban
 		};
 	}
 	if (day.name) {
 		return {
 			title: `Claimed: ${day.iso}`,
-			descriptionHtml: `<strong>${day.name}</strong> controls this date.`
+			description: 'This date is controlled by',
+			emphasis: day.name
 		};
 	}
 	return {
@@ -166,6 +186,10 @@ function closeModal() {
 		<p>
 			Choose the date a ban actually occurred. It must be after the previous ban and no later than today.
 		</p>
+		<p class="optional-note">
+			<strong>Ban details are optional.</strong> You can submit the ban with only a date, or add any
+			of the details below.
+		</p>
 		<p class="light">
 			Last ban:
 			{#if data.lastWinnerDate}
@@ -182,6 +206,31 @@ function closeModal() {
 				Ban date
 				<input type="date" name="date" bind:value={banDate} min={banMin || undefined} max={todayIso} required />
 			</label>
+			<fieldset>
+				<legend>Optional ban details</legend>
+				<label>
+					<span>Person banned <small>(optional)</small></span>
+					<input
+						type="text"
+						name="bannedPersonName"
+						placeholder="e.g. Calico Pete"
+						maxlength="100"
+					/>
+				</label>
+				<label>
+					<span>Ban performed by <small>(optional)</small></span>
+					<input type="text" name="bannedBy" placeholder="e.g. Captain Jack" maxlength="100" />
+				</label>
+				<label class="full-width">
+					<span>Reason for banning <small>(optional)</small></span>
+					<textarea
+						name="banReason"
+						placeholder="Add context about what happened…"
+						maxlength="500"
+						rows="3"
+					></textarea>
+				</label>
+			</fieldset>
 			<button type="submit" class="danger">BAN!</button>
 		</form>
 	</div>
@@ -215,7 +264,7 @@ function closeModal() {
 						{@const isPast = day.iso < todayIso}
 						{@const isSelected = day.iso === selectedDate}
 						{@const isBanned = day.banned}
-						{@const winnerName = bans.get(day.iso)}
+						{@const winnerName = bans.get(day.iso)?.winnerName}
 						<button
 							type="button"
 							class={`day ${day.inMonth ? '' : 'muted'} ${day.name ? 'claimed' : ''} ${isPast ? 'past' : ''} ${isSelected ? 'selected' : ''} ${isBanned ? 'banned' : ''}`}
@@ -268,10 +317,33 @@ function closeModal() {
 			onkeydown={(event) => event.stopPropagation()}
 		>
 			<h3>{modalContent.title}</h3>
-			{#if modalContent.descriptionHtml}
-				<p>{@html modalContent.descriptionHtml}</p>
-			{:else if modalContent.description}
+			{#if modalContent.description}
 				<p>{modalContent.description}</p>
+			{/if}
+			{#if modalContent.emphasis}
+				<p class="modal-emphasis">{modalContent.emphasis}</p>
+			{/if}
+			{#if modalContent.ban && (modalContent.ban.bannedPersonName || modalContent.ban.bannedBy || modalContent.ban.banReason)}
+				<dl class="ban-details">
+					{#if modalContent.ban.bannedPersonName}
+						<div>
+							<dt>Person banned</dt>
+							<dd>{modalContent.ban.bannedPersonName}</dd>
+						</div>
+					{/if}
+					{#if modalContent.ban.bannedBy}
+						<div>
+							<dt>Ban performed by</dt>
+							<dd>{modalContent.ban.bannedBy}</dd>
+						</div>
+					{/if}
+					{#if modalContent.ban.banReason}
+						<div class="reason">
+							<dt>Reason</dt>
+							<dd>{modalContent.ban.banReason}</dd>
+						</div>
+					{/if}
+				</dl>
 			{/if}
 		</div>
 	</div>
@@ -305,6 +377,15 @@ function closeModal() {
 		color: #d7e3f5;
 	}
 
+	.optional-note {
+		padding: 0.75rem;
+		border: 1px solid rgba(111, 211, 255, 0.25);
+		border-radius: 12px;
+		background: rgba(111, 211, 255, 0.08);
+		color: #d6f5ff;
+		font-size: 0.9rem;
+	}
+
 	form {
 		display: flex;
 		flex-direction: column;
@@ -324,12 +405,45 @@ function closeModal() {
 		color: #cfdcf1;
 	}
 
-	input {
+	input,
+	textarea {
 		padding: 0.7rem;
 		border-radius: 14px;
 		border: 1px solid rgba(255, 255, 255, 0.15);
 		background: rgba(4, 6, 12, 0.85);
 		color: #fff;
+		font: inherit;
+	}
+
+	textarea {
+		resize: vertical;
+		min-height: 5rem;
+	}
+
+	fieldset {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1rem;
+		margin: 0;
+		padding: 1rem;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 16px;
+	}
+
+	fieldset legend {
+		padding: 0 0.4rem;
+		color: #f7e99a;
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+
+	fieldset small {
+		color: #8aaed1;
+		font-weight: 400;
+	}
+
+	fieldset .full-width {
+		grid-column: 1 / -1;
 	}
 
 	button {
@@ -547,6 +661,44 @@ function closeModal() {
 		color: #d6f5ff;
 	}
 
+	.modal-card .modal-emphasis {
+		margin-top: 0.35rem;
+		color: #7fe795;
+		font-weight: 700;
+	}
+
+	.ban-details {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem;
+		margin: 1.25rem 0 0;
+		padding-top: 1rem;
+		border-top: 1px solid rgba(255, 255, 255, 0.12);
+	}
+
+	.ban-details div {
+		min-width: 0;
+	}
+
+	.ban-details .reason {
+		grid-column: 1 / -1;
+	}
+
+	.ban-details dt {
+		color: #8aaed1;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	.ban-details dd {
+		margin: 0.25rem 0 0;
+		color: #f0f4ff;
+		overflow-wrap: anywhere;
+		white-space: pre-wrap;
+	}
+
 	@media (max-width: 768px) {
 		.month-controls {
 			width: 100%;
@@ -555,6 +707,18 @@ function closeModal() {
 
 		.day {
 			min-height: 70px;
+		}
+	}
+
+	@media (max-width: 420px) {
+		fieldset,
+		.ban-details {
+			grid-template-columns: 1fr;
+		}
+
+		fieldset .full-width,
+		.ban-details .reason {
+			grid-column: auto;
 		}
 	}
 </style>

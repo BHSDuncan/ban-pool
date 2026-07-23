@@ -31,7 +31,10 @@ export const load: PageServerLoad = async ({ url }) => {
 		latestBanDate: latestBan ? latestBan.date.toISOString().slice(0, 10) : null,
 		bans: bans.map((ban) => ({
 			date: ban.date.toISOString().slice(0, 10),
-			winnerName: ban.winnerName ?? null
+			winnerName: ban.winnerName ?? null,
+			banReason: ban.banReason ?? null,
+			bannedPersonName: ban.bannedPersonName ?? null,
+			bannedBy: ban.bannedBy ?? null
 		}))
 	};
 };
