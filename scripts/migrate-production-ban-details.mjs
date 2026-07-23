@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { MongoClient } from 'mongodb';
 
-if (process.env.NODE_ENV !== 'production') {
-	console.error('Refusing to run: NODE_ENV must be production.');
+if (!process.argv.includes('--confirm-production')) {
+	console.error('Refusing to run without --confirm-production.');
 	process.exit(1);
 }
 

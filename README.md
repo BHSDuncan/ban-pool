@@ -75,13 +75,16 @@ The project uses `@sveltejs/adapter-auto`, so it works locally and on platforms 
 ### Migrating production ban records
 
 The optional ban-detail fields are additive, but an idempotent migration is included so legacy
-production records have the same explicit shape. From a Vercel-linked checkout, run:
+production records have the same explicit shape. From a Vercel-linked checkout with the Vercel CLI
+installed and authenticated, run:
 
 ```bash
-vercel env pull .env.production.local --environment=production
 npm run db:migrate:production
 ```
 
+The command uses `vercel env run -e production` to inject the linked project's production
+environment variables directly into the migration process. It does not create or require a local
+production environment file.
+
 The script only updates documents in `prod_winners` that are missing one or more of the new fields.
-It can be run again safely. Keep `.env.production.local` private and delete it after use if it is
-not part of your normal local deployment workflow.
+It can be run again safely.
